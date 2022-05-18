@@ -1,0 +1,102 @@
+stages:
+  - build
+  - quality
+  - deploy
+
+deploy_dev:
+  stage: deploy
+  timeout: 10 minutes
+  script:
+    - rm .env
+    - env
+    - docker-compose --project-name development rm -sf symrise-backend
+    - docker-compose --project-name development build --no-cache
+    - docker-compose --project-name development up -d
+  only:
+    - development
+  tags:
+    - symrise-backend
+  environment: development
+
+deploy_testing:
+  stage: deploy
+  timeout: 10 minutes
+  script:
+    - rm .env
+    - docker-compose --project-name testing rm -sf symrise-backend
+    - docker-compose --project-name testing build --no-cache
+    - docker-compose --project-name testing up -d
+  only:
+    - testing
+  tags:
+    - symrise-backend
+  environment: testing
+
+deploy_stg:
+  stage: deploy
+  timeout: 10 minutes
+  script:
+    - rm .env
+    - docker-compose --project-name staging rm -sf symrise-backend
+    - docker-compose --project-name staging build --no-cache
+    - docker-compose --project-name staging up -d
+  only:
+    - staging
+  tags:
+    - symrise-backend
+  environment: staging
+  dependencies:
+    - unit-test
+
+build:
+  stage: build
+  timeout: 15 minutes
+  script:
+    - docker image build -f Dockerfile.test -t symrise_backend_image:latest .
+  tags:
+    - symrise-backend
+  only:
+    - merge_requests
+    - development
+
+linting:
+  stage: quality
+  timeout: 15 minutes
+  dependencies:
+    - build
+  script:
+    - docker run --name symrise_temp_lint_container symrise_backend_image npm run lint
+  after_script:
+    - docker container rm -f symrise_temp_lint_container
+  tags:
+    - symrise-backend
+  only:
+    - merge_requests
+
+unit-test:
+  stage: quality
+  timeout: 30 minutes
+  dependencies:
+    - build
+  script:
+    - docker run --name symrise_temp_test_container symrise_backend_image npm run test
+  after_script:
+    - docker container rm -f symrise_temp_test_container
+  tags:
+    - symrise-backend
+  only:
+    - merge_requests
+    - development
+
+sonarqube:
+  stage: quality
+  timeout: 30 minutes
+  script:
+    - chmod +x sonarscanner.ci.sh && ./sonarscanner.ci.sh
+  after_script:
+    - docker container rm -f sonarsource/sonar-scanner-cli
+  tags:
+    - symrise-backend
+  only:
+    - development
+    - merge_requests

@@ -1,0 +1,48 @@
+version: '3.7'
+services : 
+    freqWords-backend:
+        container_name: freqWords-backend-${NODE_ENV}
+        build:
+            context: .
+        depends_on:
+            - freqWords-db
+        networks:
+            - freqWords-network
+        environment:
+            NODE_ENV: ${NODE_ENV}
+            PORT: ${PORT}
+            HOST: ${HOST}
+            DATABASE_TYPE: ${DATABASE_TYPE}
+            DATABASE_HOST: ${DATABASE_HOST}
+            DATABASE_PORT: ${DATABASE_PORT}
+            DATABASE_USERNAME: ${DATABASE_USERNAME}
+            DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+            DATABASE_NAME: ${DATABASE_NAME}
+            DATABASE_SCHEMA: ${DATABASE_SCHEMA}
+            SECRET_JWT: ${SECRET_JWT}
+        ports:
+            - "${PORT}:${PORT}"
+    freqWords-db:
+        container_name: freqWords-db-${NODE_ENV}
+        image: mysql:8.0
+        restart: always
+        environment:
+            MYSQL_DATABASE: ${DATABASE_NAME}
+            MYSQL_USER: ${DATABASE_USERNAME}
+            MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
+            MYSQL_ROOT_HOST: "%"
+        ports: 
+            - "${DATABASE_EXTERNAL_PORT}:${DATABASE_PORT}"
+        networks:
+            - freqWords-network
+        volumes:
+            - database-volume:/var/lib/mysql
+
+volumes:
+    database-volume:
+        name: freqWords-database-volume-${NODE_ENV}
+
+networks:
+    freqWords-network:
+        name: freqWords-backend-network-${NODE_ENV}
